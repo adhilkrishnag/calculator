@@ -16,6 +16,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
   late AnimationController _rippleController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _rippleAnimation;
+  late ScrollController _scrollController;
 
   @override
   void initState() {
@@ -36,10 +37,13 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     _rippleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _rippleController, curve: Curves.easeOut),
     );
+
+    _scrollController = ScrollController();
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _scaleController.dispose();
     _rippleController.dispose();
     super.dispose();
@@ -149,37 +153,61 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                   ],
                 ),
                 child: BlocBuilder<CalculatorBloc, CalculatorState>(
-                  builder: (context, state) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        state.expression.isEmpty ? '0' : state.expression,
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Colors.white.withValues(alpha: 0.6),
-                          fontWeight: FontWeight.w400,
-                          letterSpacing: 0.5,
-                        ),
-                        textAlign: TextAlign.end,
-                      ),
-                      const SizedBox(height: 16),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          state.result,
-                          style: const TextStyle(
-                            fontSize: 48,
-                            fontWeight: FontWeight.w300,
-                            color: Colors.white,
-                            letterSpacing: -1,
-                          ),
-                          textAlign: TextAlign.end,
-                        ),
-                      ),
-                    ],
-                  ),
+                  builder: (context, state) {
+                    // Auto-scroll to bottom when expression changes
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (_scrollController.hasClients) {
+                        _scrollController.jumpTo(
+                          _scrollController.position.maxScrollExtent,
+                        );
+                      }
+                    });
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            SizedBox(
+                              height: (constraints.maxHeight / 2) - 8,
+                              child: SingleChildScrollView(
+                                controller: _scrollController,
+                                child: Text(
+                                  state.expression.isEmpty
+                                      ? '0'
+                                      : state.expression,
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                    fontWeight: FontWeight.w400,
+                                    letterSpacing: 0.5,
+                                  ),
+                                  textAlign: TextAlign.end,
+                                  softWrap: true, // Enable text wrapping
+                                  overflow: TextOverflow
+                                      .visible, // Allow overflow for scrolling
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              height: (constraints.maxHeight / 2) - 8,
+                              child: Text(
+                                state.result,
+                                style: const TextStyle(
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.w300,
+                                  color: Colors.white,
+                                  letterSpacing: -1,
+                                ),
+                                textAlign: TextAlign.end,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
 
